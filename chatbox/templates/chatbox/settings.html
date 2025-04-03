@@ -1,0 +1,275 @@
+{% extends 'chatbox/base.html' %}
+
+{% block title %}
+تنظیمات
+{% endblock %}
+
+{% block extra_head %}
+<!-- اضافه کردن Tailwind CSS -->
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<!-- اضافه کردن فونت Vazir -->
+<link href="https://cdn.fontcdn.ir/v1.0.0/Vazir.css" rel="stylesheet">
+
+<style>
+    /* استایل‌های اضافی برای دکمه‌های رادیویی */
+    .radio-label {
+        position: relative;
+        display: inline-block;
+        padding: 6px 12px;
+        background-color: #e5e7eb; /* خاکستری روشن */
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    .radio-label input {
+        display: none;
+    }
+
+    .radio-label span {
+        color: #4b5563; /* خاکستری تیره */
+        font-size: 0.875rem; /* متن کوچک‌تر */
+    }
+
+    .radio-label input:checked + span {
+        background-color: #6a1b9a; /* رنگ بنفش هماهنگ با تم */
+        color: white;
+        padding: 6px 12px;
+        border-radius: 9999px;
+        display: inline-block;
+    }
+
+    /* خط جداکننده بین فیلدها */
+    .setting-field {
+        border-bottom: 1px solid #e5e7eb; /* خط جداکننده خاکستری */
+        padding-bottom: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .setting-field:last-child {
+        border-bottom: none; /* حذف خط جداکننده برای آخرین فیلد */
+    }
+
+    /* استایل برای دکمه ذخیره */
+    .save-button {
+        background: #6a1b9a;
+        transition: background 0.3s ease;
+    }
+
+    .save-button:hover {
+        background: #5e1685;
+    }
+
+    /* تنظیم فونت برای کل صفحه */
+    body {
+        font-family: 'Vazir', sans-serif;
+    }
+</style>
+
+<!-- تعریف URL به صورت گلوبال برای استفاده توی جاوااسکریپت -->
+<script>
+    const saveSettingsUrl = "{% url 'save_settings' %}";
+    const getSettingsUrl = "{% url 'get_user_settings' current_user.username %}";
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto p-6 bg-white rounded-lg shadow-md mt-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">تنظیمات حریم خصوصی</h2>
+
+    <!-- پیام موفقیت یا خطا -->
+    <div id="message" class="hidden mb-6 p-4 rounded-lg text-center"></div>
+
+    <!-- فرم تنظیمات -->
+    <form method="POST" id="settings-form">
+        {% csrf_token %}
+        <!-- نمایش آخرین زمان آنلاین -->
+        <div class="setting-field flex items-center justify-between">
+            <label class="text-gray-700 text-sm font-medium">نمایش آخرین زمان آنلاین</label>
+            <div class="flex space-x-2 space-x-reverse">
+                <label class="radio-label">
+                    <input type="radio" name="show_last_seen" value="true" {% if request.user.settings.show_last_seen %}checked{% endif %}>
+                    <span>روشن</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="show_last_seen" value="false" {% if not request.user.settings.show_last_seen %}checked{% endif %}>
+                    <span>خاموش</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- مخفی کردن وضعیت آنلاین -->
+        <div class="setting-field flex items-center justify-between">
+            <label class="text-gray-700 text-sm font-medium">مخفی کردن وضعیت آنلاین</label>
+            <div class="flex space-x-2 space-x-reverse">
+                <label class="radio-label">
+                    <input type="radio" name="hide_online_status" value="true" {% if request.user.settings.hide_online_status %}checked{% endif %}>
+                    <span>روشن</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="hide_online_status" value="false" {% if not request.user.settings.hide_online_status %}checked{% endif %}>
+                    <span>خاموش</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- نمایش وضعیت "در حال نوشتن..." -->
+        <div class="setting-field flex items-center justify-between">
+            <label class="text-gray-700 text-sm font-medium">نمایش وضعیت "در حال نوشتن..."</label>
+            <div class="flex space-x-2 space-x-reverse">
+                <label class="radio-label">
+                    <input type="radio" name="show_typing_status" value="true" {% if request.user.settings.show_typing_status %}checked{% endif %}>
+                    <span>روشن</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="show_typing_status" value="false" {% if not request.user.settings.show_typing_status %}checked{% endif %}>
+                    <span>خاموش</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- گزینه جدید: همیشه پیام‌ها را خوانده‌نشده نگه دار -->
+        <div class="setting-field flex items-center justify-between">
+            <label class="text-gray-700 text-sm font-medium">همیشه پیام‌ها را خوانده‌نشده نگه دار (عدم نمایش "دیده شد" برای دیگران)</label>
+            <div class="flex space-x-2 space-x-reverse">
+                <label class="radio-label">
+                    <input type="radio" name="always_keep_unread" value="true" {% if request.user.settings.always_keep_unread %}checked{% endif %}>
+                    <span>روشن</span>
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="always_keep_unread" value="false" {% if not request.user.settings.always_keep_unread %}checked{% endif %}>
+                    <span>خاموش</span>
+                </label>
+            </div>
+        </div>
+        <!-- بخش لیست بلاک‌شده‌ها -->
+        <div class="setting-field">
+            <button type="button" class="w-full text-right bg-gray-200 p-3 rounded flex justify-between items-center" onclick="toggleBlockList()">
+                <span>لیست بلاک‌شده‌ها</span>
+                <span id="block-list-arrow" class="arrow">▼</span>
+            </button>
+            <div id="block-list-content" class="hidden mt-2 p-4 bg-gray-100 rounded">
+                {% if blocked_users %}
+                <ul class="space-y-2">
+                    {% for blocked in blocked_users %}
+                    <li class="flex justify-between items-center p-2 bg-white rounded shadow">
+                        <span>{{ blocked.blocked.username }}</span>
+                        <span class="text-sm text-gray-500">
+                            بلاک شده در: {{ blocked.created_at|date:"Y-m-d H:i" }}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-center text-gray-500">لیست بلاک خالی است</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- لینک پنل ادمین برای سوپریوزر -->
+        {% if user.is_superuser %}
+        <div class="mb-6 text-center">
+            <a href="http://127.0.0.1:8000/admin/" class="text-purple-600 hover:text-purple-800 text-sm font-medium">ورود به پنل ادمین</a>
+        </div>
+        {% endif %}
+
+        <!-- دکمه ذخیره -->
+        <div class="text-center">
+            <button type="button" onclick="saveSettings()" class="save-button text-white px-6 py-2 rounded-lg font-medium">ذخیره</button>
+        </div>
+    </form>
+
+    <!-- لینک بازگشت -->
+    <div class="mt-6 text-center">
+        <a href="{% url 'home' %}" class="text-purple-600 hover:text-purple-800 text-sm font-medium">بازگشت</a>
+    </div>
+</div>
+
+<script>
+    // تابع برای گرفتن CSRF token
+    function getCsrfToken() {
+        const name = 'csrftoken';
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                return cookie.substring(name.length + 1);
+            }
+        }
+        return '';
+    }
+
+    // تابع برای نمایش پیام
+    function showMessage(text, type) {
+        const messageDiv = document.getElementById('message');
+        messageDiv.textContent = text;
+        messageDiv.className = `mb-6 p-4 rounded-lg text-center ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+        messageDiv.classList.remove('hidden');
+        setTimeout(() => {
+            messageDiv.classList.add('hidden');
+        }, 3000);
+    }
+
+    // تابع برای باز و بسته کردن لیست بلاک‌شده‌ها
+    function toggleBlockList() {
+        const content = document.getElementById('block-list-content');
+        const arrow = document.getElementById('block-list-arrow');
+        content.classList.toggle('hidden');
+        arrow.textContent = content.classList.contains('hidden') ? '▼' : '▲';
+    }
+
+    // لود اولیه‌ی تنظیمات کاربر (برای اطمینان از هماهنگی با سرور)
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch(getSettingsUrl)
+            .then(response => response.json())
+            .then(data => {
+                // تنظیم گزینه‌های رادیویی بر اساس داده‌های دریافتی
+                document.querySelector(`input[name="show_last_seen"][value="${data.show_last_seen}"]`).checked = true;
+                document.querySelector(`input[name="hide_online_status"][value="${data.hide_online_status}"]`).checked = true;
+                document.querySelector(`input[name="show_typing_status"][value="${data.show_typing_status}"]`).checked = true;
+                document.querySelector(`input[name="always_keep_unread"][value="${data.always_keep_unread}"]`).checked = true;
+                console.log("تنظیمات اولیه لود شد:", data);
+            })
+            .catch(error => {
+                console.error("خطا در لود تنظیمات:", error);
+                showMessage("خطا در لود تنظیمات", "error");
+            });
+    });
+
+    // تابع برای ذخیره تنظیمات
+    function saveSettings() {
+        const showLastSeen = document.querySelector('input[name="show_last_seen"]:checked').value === "true";
+        const hideOnlineStatus = document.querySelector('input[name="hide_online_status"]:checked').value === "true";
+        const showTypingStatus = document.querySelector('input[name="show_typing_status"]:checked').value === "true";
+        const alwaysKeepUnread = document.querySelector('input[name="always_keep_unread"]:checked').value === "true";
+
+        fetch(saveSettingsUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({
+                show_last_seen: showLastSeen,
+                hide_online_status: hideOnlineStatus,
+                show_typing_status: showTypingStatus,
+                always_keep_unread: alwaysKeepUnread
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                console.log("تنظیمات با موفقیت ذخیره شد");
+                showMessage("تنظیمات با موفقیت ذخیره شد!", "success");
+            } else {
+                console.error("خطا در ذخیره تنظیمات");
+                showMessage("خطا در ذخیره تنظیمات", "error");
+            }
+        })
+        .catch(error => {
+            console.error("خطا:", error);
+            showMessage("خطا در ارتباط با سرور", "error");
+        });
+    }
+</script>
+{% endblock %}

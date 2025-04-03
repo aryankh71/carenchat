@@ -1,0 +1,126 @@
+{#{% extends "base.html" %}#}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت‌نام</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f9f9f9;
+            margin: 0;
+            direction: rtl;
+        }
+        .signup-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 350px;
+            max-width: 90%;
+        }
+        .illustration {
+            width: 150px;
+            margin: 0 auto 20px;
+        }
+        h2 {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .welcome-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .signup-form input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .signup-form input:focus {
+            outline: none;
+            border-color: #6a1b9a;
+        }
+        .signup-btn {
+            width: 100%;
+            background-color: #6a1b9a;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .signup-btn:hover {
+            background-color: #4a148c;
+        }
+        .links {
+            margin-top: 15px;
+        }
+        .links a {
+            color: #6a1b9a;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .error-message {
+            color: red;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <!-- تصویر گرافیکی -->
+        <img src="https://via.placeholder.com/150" alt="Illustration" class="illustration">
+
+        <!-- متن خوش‌آمدگویی -->
+        <h2>ثبت‌نام کن</h2>
+        <p class="welcome-text">به جمع ما بپیوند، ثبت‌نام فقط چند لحظه طول می‌کشه!</p>
+
+        <!-- نمایش پیام‌های خطا -->
+        {% if form.errors %}
+            {% for field in form %}
+                {% for error in field.errors %}
+                    <p class="error-message">{{ error }}</p>
+                {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <p class="error-message">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <!-- فرم ثبت‌نام -->
+        <form method="post" class="signup-form">
+            {% csrf_token %}
+            <input type="text" name="phone" placeholder="شماره تماس" value="{{ form.phone.value|default_if_none:'' }}" required>
+            <input type="text" name="username" placeholder="نام کاربری" value="{{ form.username.value|default_if_none:'' }}" required>
+            <input type="email" name="email" placeholder="ایمیل" value="{{ form.email.value|default_if_none:'' }}" required>
+            <input type="password" name="password1" placeholder="رمز عبور" required>
+            <input type="password" name="password2" placeholder="تکرار رمز عبور" required>
+            <button type="submit" class="signup-btn">ثبت‌نام</button>
+        </form>
+
+        <!-- لینک ورود -->
+        <div class="links">
+            <a href="{% url 'login' %}">حساب داری؟ وارد شو</a>
+        </div>
+    </div>
+</body>
+</html>
+{% endblock %}

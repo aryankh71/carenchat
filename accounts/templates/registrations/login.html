@@ -1,0 +1,185 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://cdn.fontiran.com/css/Vazir');
+        body {
+            font-family: 'Vazir',Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f9f9f9;
+            margin: 0;
+            direction: rtl;
+        }
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            width: 350px;
+            max-width: 90%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .illustration {
+            width: 300px;
+            height: auto;
+            margin: 0 auto 15px;
+            display: block;
+            background: none;
+        }
+        h2 {
+            font-family: 'Vazir', sans-serif;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .welcome-text {
+            font-family: 'tahoma', sans-serif;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            font-family: 'tahoma', sans-serif;
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        label {
+            font-size: 14px;
+            color: #333;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            direction: ltr;
+            text-align: left;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #6a1b9a;
+        }
+        .error-message {
+            color: red;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .login-btn {
+            width: 100%;
+            background-color: #6a1b9a;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .login-btn:hover {
+            background-color: #4a148c;
+        }
+        .links {
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        .links a {
+            font-family: 'tahoma', sans-serif;
+            color: #6a1b9a;
+            text-decoration: none;
+        }
+        .divider {
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            color: #999;
+            font-size: 14px;
+        }
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+            margin: 0 10px;
+        }
+        .social-login {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        .social-login a {
+            color: #333;
+            font-size: 20px;
+            text-decoration: none;
+        }
+        .social-login a:hover {
+            color: #6a1b9a;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+{#        <img src="/chatbox/static/chatbox/img/logo1.jpg" alt="logo" class="illustration">#}
+    <img src="{% static '/chatbox/img/carenchat-logo.png' %}" alt="logo" class="illustration">
+        <h2>سلام، خوش آمدید</h2>
+        <p class="welcome-text">لطفاً اطلاعات خود را برای ورود وارد کنید.</p>
+
+        <!-- نمایش پیام‌های خطا -->
+        {% if form.errors %}
+            <div class="error-message">
+                لطفاً اطلاعات وارد شده را بررسی کنید.
+            </div>
+        {% endif %}
+
+        <!-- فرم ورود -->
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="error-message">{{ form.username.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="error-message">{{ form.password.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="login-btn">ورود</button>
+        </form>
+
+        <div class="links">
+            <a href="{% url 'password_reset' %}">فراموشی رمز عبور؟</a>
+            <a href="{% url 'signup' %}">ثبت‌نام</a>
+        </div>
+
+        <div class="divider">یا ورود با</div>
+
+        <div class="social-login">
+            <a href="#"><i class="fab fa-google"></i></a>
+            <a href="#"><i class="fab fa-apple"></i></a>
+            <a href="#"><i class="fab fa-facebook"></i></a>
+        </div>
+    </div>
+</body>
+</html>

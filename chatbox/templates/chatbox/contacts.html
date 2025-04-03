@@ -1,0 +1,17 @@
+{#{% extends "base.html" %}#}
+
+{% block content %}
+    <h2>{{ title }}</h2>
+
+    {% if users %}
+        <ul>
+            {% for user in users %}
+                {% with user.username as username %}
+                    <li><a href="{% url 'chat' username %}">{{ username }}</a></li>
+                {% endwith %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>هیچ کاربری یافت نشد.</p>
+    {% endif %}
+{% endblock %}

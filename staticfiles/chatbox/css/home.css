@@ -1,0 +1,312 @@
+ /* استایل‌های کلی صفحه */
+    body {
+        margin: 0;
+        padding: 0;
+        background: #f9f9f9;
+        font-family: Arial, sans-serif;
+    }
+
+    .container {
+        width: 100%;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    /* هدر (شامل سرچ‌بار و تب‌ها) */
+    .header-tabs {
+        background: white;
+        padding: 10px 15px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border-bottom: 1px solid #ddd;
+    }
+
+    /* بخش سرچ */
+    .search-container {
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .search-label {
+        font-size: 14px;
+        color: #666;
+        margin-left: 10px;
+        direction: rtl;
+        text-align: right;
+    }
+
+    .search-icon {
+        font-size: 20px;
+        color: #6a1b9a;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+    .search-icon:hover {
+        transform: scale(1.2);
+    }
+
+    .search-bar {
+        width: 0;
+        padding: 0;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        font-size: 14px;
+        background: #f1f1f1;
+        direction: ltr;
+        text-align: left;
+        box-sizing: border-box;
+        transition: all 0.5s ease;
+        overflow: hidden;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .search-bar.active {
+        width: 100%;
+        max-width: 300px;
+        padding: 10px;
+    }
+
+    /* تب‌ها */
+    .tabs {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 10px;
+        background: white;
+        padding: 5px 0;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .tabs a {
+        font-size: 16px;
+        color: #666;
+        text-decoration: none;
+        padding: 5px 0;
+        transition: color 0.3s ease;
+    }
+
+    .tabs a.active {
+        color: #6a1b9a;
+        border-bottom: 2px solid #6a1b9a;
+    }
+
+    .tabs a:hover {
+        color: #6a1b9a;
+    }
+
+    /* لیست چت‌ها */
+    .chat-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .chat-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        border-bottom: 1px solid #ddd;
+        text-decoration: none;
+        color: #333;
+        transition: background 0.3s ease;
+    }
+
+    .chat-item:hover {
+        background: #f5f5f5;
+    }
+
+    .chat-item.hidden {
+        display: none;
+    }
+
+    .avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-left: 10px;
+    }
+
+    .chat-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-info .username {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .chat-info .status-container {
+        display: flex;
+        align-items: center;
+        font-size: 12px;
+        color: #666;
+    }
+
+    .chat-info .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-left: 5px;
+    }
+
+    .chat-info .status-indicator.online {
+        background: green;
+    }
+
+    .chat-info .status-indicator.offline {
+        background: gray;
+    }
+
+    .chat-info .status-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-info .last-message {
+        font-size: 14px;
+        color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .chat-meta .unread-count {
+
+        background: #6a1b9a;
+        color: white;
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        display: none;
+        margin-bottom: 5px;
+    }
+
+    .chat-meta .unread-count.show {
+        display: inline-block;
+    }
+
+    .chat-meta .time {
+        font-size: 12px;
+        color: #999;
+    }
+
+    .no-chats {
+        text-align: center;
+        color: #666;
+        padding: 20px;
+        font-size: 16px;
+    }
+
+    /* نوار پایین */
+    .bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        background: white;
+        padding: 10px 0;
+        border-top: 1px solid #ddd;
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+        padding-bottom: env(safe-area-inset-bottom);
+        flex-shrink: 0;
+    }
+
+    .bottom-nav a {
+        color: #666;
+        font-size: 24px;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .bottom-nav a.active {
+        color: #6a1b9a;
+    }
+
+    .bottom-nav a:hover {
+        color: #6a1b9a;
+    }
+
+    /* مودال کاربران */
+    #contacts-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        border: 1px solid #ccc;
+        padding: 15px;
+        max-height: 300px;
+        width: 80%;
+        max-width: 300px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+
+    #search {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        font-size: 14px;
+        background: #f1f1f1;
+        direction: ltr;
+        text-align: left;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+    }
+
+    #contacts-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .user-item {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        transition: background 0.3s ease;
+    }
+
+    .user-item:hover {
+        background: #f5f5f5;
+    }
+
+    .user-item a {
+        text-decoration: none;
+        color: #333;
+        font-size: 14px;
+    }
+
+    .user-item:last-child {
+        border-bottom: none;
+    }

@@ -1,0 +1,459 @@
+{% extends 'chatbox/base.html' %}
+{% load static %}
+
+{% block title %}
+لیست چت‌ها
+{% endblock %}
+
+{% block extra_head %}
+<!-- لود Font Awesome برای آیکون‌ها -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- DaisyUI (برای کامپوننت‌های آماده) -->
+<link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet">
+
+<style>
+    /* استایل‌های سفارشی که با تیلویند قابل جایگزینی نیستند */
+    .message-sender.you {
+        @apply text-green-600 font-bold;
+    }
+    .message-sender.user {
+        @apply text-blue-600 font-bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 max-w-3xl">
+    <!-- دکمه تست نوتیفیکیشن -->
+    {% if request.user.is_superuser %}
+    <button id="test-notification" class="m-2 p-2 bg-purple-800 text-white rounded-lg cursor-pointer">
+        تست نوتیفیکیشن
+    </button>
+    {% endif %}
+
+    <!-- نوار جستجو و تب‌ها -->
+    <div class="bg-white rounded-lg shadow mb-4 p-4">
+        <div class="flex items-center mb-4 relative">
+            <span class="absolute right-3 text-gray-400">
+                <i class="fas fa-search"></i>
+            </span>
+            <input type="text" class="w-full pr-10 pl-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="جستجوی چت...">
+        </div>
+
+        <div class="flex border-b">
+            <a href="#" class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-500">چت‌ها</a>
+            <a href="#" class="px-4 py-2 font-medium text-gray-500">دوستان</a>
+            <a href="#" class="px-4 py-2 font-medium text-gray-500">تماس‌ها</a>
+        </div>
+    </div>
+
+    <!-- لیست چت‌ها -->
+    {% if chats %}
+    <ul class="space-y-2" id="chat-list">
+        {% for chat in chats %}
+            {% if chat.user1 == request.user %}
+                {% with other_user=chat.user2 %}
+                <li data-username="{{ other_user.username }}" class="bg-white rounded-lg shadow overflow-hidden hover:bg-gray-50 transition">
+                    <a href="{% url 'chat' other_user.username %}" class="flex items-center p-4">
+                        <div class="relative">
+                            {% if other_user.profile_photo %}
+                                <img src="{{ other_user.profile_photo.url }}" alt="{{ other_user.username }}" class="w-12 h-12 rounded-full object-cover">
+                            {% else %}
+                                <img src="{% static 'chatbox/img/person.png' %}" alt="default" class="w-12 h-12 rounded-full object-cover">
+                            {% endif %}
+                            <span id="status-{{ other_user.username }}" class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white"></span>
+                        </div>
+
+                        <div class="flex-1 mr-3">
+                            <div class="flex justify-between items-baseline">
+                                <span class="font-bold">{{ other_user.username }}</span>
+                                <span class="text-xs text-gray-500">{{ chat.last_message_time|default:"" }}</span>
+                            </div>
+
+                            <div class="flex items-center text-sm text-gray-600">
+                                {% if chat.last_message %}
+                                    {% if chat.last_message_sender == request.user %}
+                                        <span class="message-sender you">شما:</span>
+                                    {% else %}
+                                        <span class="message-sender user">کاربر:</span>
+                                        <div class="flex items-center mr-2">
+                                            <span id="last-seen-{{ other_user.username }}" class="text-xs text-gray-400" data-last-seen-timestamp="{{ chat.last_seen_timestamp }}">در حال بارگذاری...</span>
+                                        </div>
+                                    {% endif %}
+                                    <span class="truncate">{{ chat.last_message }}</span>
+                                {% else %}
+                                    <span class="text-gray-400">هنوز پیامی ارسال نشده</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if chat.unread_count > 0 %}
+                        <span class="unread-count bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs" data-username="{{ other_user.username }}">
+                            {{ chat.unread_count }}
+                        </span>
+                        {% else %}
+                        <span class="unread-count hidden" data-username="{{ other_user.username }}"></span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endwith %}
+            {% else %}
+                {% with other_user=chat.user1 %}
+                <li data-username="{{ other_user.username }}" class="bg-white rounded-lg shadow overflow-hidden hover:bg-gray-50 transition">
+                    <a href="{% url 'chat' other_user.username %}" class="flex items-center p-4">
+                        <div class="relative">
+                            {% if other_user.profile_photo %}
+                                <img src="{{ other_user.profile_photo.url }}" alt="{{ other_user.username }}" class="w-12 h-12 rounded-full object-cover">
+                            {% else %}
+                                <img src="{% static 'chatbox/img/person.png' %}" alt="default" class="w-12 h-12 rounded-full object-cover">
+                            {% endif %}
+                            <span id="status-{{ other_user.username }}" class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white"></span>
+                        </div>
+
+                        <div class="flex-1 mr-3">
+                            <div class="flex justify-between items-baseline">
+                                <span class="font-bold">{{ other_user.username }}</span>
+                                <span class="text-xs text-gray-500">{{ chat.last_message_time|default:"" }}</span>
+                            </div>
+
+                            <div class="flex items-center text-sm text-gray-600">
+                                {% if chat.last_message %}
+                                    {% if chat.last_message_sender == request.user %}
+                                        <span class="message-sender you">شما:</span>
+                                    {% else %}
+                                        <span class="message-sender user">کاربر:</span>
+                                        <div class="flex items-center mr-2">
+                                            <span id="last-seen-{{ other_user.username }}" class="text-xs text-gray-400" data-last-seen-timestamp="{{ chat.last_seen_timestamp }}">در حال بارگذاری...</span>
+                                        </div>
+                                    {% endif %}
+                                    <span class="truncate">{{ chat.last_message }}</span>
+                                {% else %}
+                                    <span class="text-gray-400">هنوز پیامی ارسال نشده</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if chat.unread_count > 0 %}
+                        <span class="unread-count bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs" data-username="{{ other_user.username }}">
+                            {{ chat.unread_count }}
+                        </span>
+                        {% else %}
+                        <span class="unread-count hidden" data-username="{{ other_user.username }}"></span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endwith %}
+            {% endif %}
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+        صندوق شما خالی است
+    </div>
+    {% endif %}
+
+    <!-- نوار پایین -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white shadow-lg flex justify-around py-3">
+        <a href="{% url 'home' %}" class="text-blue-600"><i class="fas fa-home text-xl"></i></a>
+        <a href="#" id="toggle-modal" class="text-gray-600"><i class="fas fa-plus text-xl"></i></a>
+        <a href="{% url 'logout' %}" class="text-gray-600"><i class="fas fa-sign-out-alt text-xl"></i></a>
+    </div>
+</div>
+
+<!-- پنجره نمایش کاربران -->
+<div id="contacts-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <input type="text" id="search" class="w-full p-2 border rounded-lg mb-4" placeholder="جستجوی @username" autocomplete="off">
+        <ul id="contacts-list" class="max-h-96 overflow-y-auto">
+            {% for user in users %}
+                <li class="user-item p-2 hover:bg-gray-100 rounded-lg" data-username="{{ user.username }}" style="display: none;">
+                    <a href="{% url 'chat' user.username %}" class="block">{{ user.username }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+        <button id="close-modal" class="mt-4 w-full py-2 bg-gray-200 rounded-lg">بستن</button>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // فرمت کردن زمان به صورت نسبی
+        function formatRelativeTime(timestamp) {
+            const date = new Date(timestamp * 1000); // تبدیل به میلی‌ثانیه
+            const now = new Date();
+            const diffSeconds = Math.floor((now - date) / 1000); // تفاوت به ثانیه
+
+            // کمتر از ۱ دقیقه
+            if (diffSeconds < 60) {
+                return "همین حالا";
+            }
+
+            // بین ۱ تا ۶۰ دقیقه
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            if (diffMinutes < 60) {
+                return `${diffMinutes} دقیقه پیش`;
+            }
+
+            // بین ۱ تا ۲۴ ساعت
+            const diffHours = diffMinutes / 60;
+            if (diffHours < 24) {
+                const fullHours = Math.floor(diffHours);
+                const remainingMinutes = diffMinutes % 60;
+                if (remainingMinutes >= 30) {
+                    return `${fullHours}.۵ ساعت پیش`; // مثلاً "۱.۵ ساعت پیش"
+                }
+                return `${fullHours} ساعت پیش`;
+            }
+
+            // بین ۱ تا ۷ روز
+            const diffDays = Math.floor(diffHours / 24);
+            if (diffDays < 7) {
+                return `${diffDays} روز پیش`;
+            }
+
+            // بیشتر از ۷ روز
+            return "مدت زمان زیادی گذشته";
+        }
+
+        // تبدیل تایم‌استمپ‌های اولیه به زمان نسبی
+        function updateRelativeTimes() {
+            // آپدیت زمان نسبی پیام‌ها
+            document.querySelectorAll('.relative-time').forEach(timeDiv => {
+                const timestamp = timeDiv.getAttribute('data-timestamp');
+                if (timestamp) {
+                    timeDiv.textContent = formatRelativeTime(timestamp);
+                }
+            });
+
+            // آپدیت زمان آخرین بازدید
+            document.querySelectorAll('.status-text').forEach(lastSeenDiv => {
+                const timestamp = lastSeenDiv.getAttribute('data-last-seen-timestamp');
+                const currentText = lastSeenDiv.textContent;
+                if (timestamp && currentText !== "آنلاین" && currentText !== "غیرفعال" && currentText !== "وضعیت آنلاین: غیرفعال") {
+                    lastSeenDiv.textContent = " " + formatRelativeTime(timestamp);
+                }
+            });
+        }
+
+        // اجرای اولیه
+        updateRelativeTimes();
+
+        // آپدیت زمان‌ها هر ۱۰ ثانیه
+        setInterval(updateRelativeTimes, 10000);
+
+        // دکمه تست نوتیفیکیشن
+        const testNotificationButton = document.getElementById("test-notification");
+        if (testNotificationButton) {
+            testNotificationButton.addEventListener("click", function () {
+                console.log("دکمه تست نوتیفیکیشن کلیک شد.");
+                sendTestNotification(); // از تابع تعریف‌شده در base.html استفاده می‌کنیم
+            });
+        }
+
+        // باز و بسته کردن سرچ‌بار
+        const searchIcon = document.querySelector(".search-icon");
+        const searchBar = document.querySelector(".search-bar");
+        const chatItems = document.querySelectorAll(".chat-item");
+
+        searchIcon.addEventListener("click", function () {
+            searchBar.classList.toggle("active");
+            if (searchBar.classList.contains("active")) {
+                searchBar.focus();
+            }
+        });
+
+        // فیلتر کردن چت‌ها با سرچ‌بار
+        searchBar.addEventListener("input", function () {
+            const searchValue = this.value.trim().toLowerCase();
+            chatItems.forEach(item => {
+                const username = item.getAttribute("data-username").toLowerCase();
+                if (username.includes(searchValue)) {
+                    item.classList.remove("hidden");
+                } else {
+                    item.classList.add("hidden");
+                }
+            });
+        });
+
+        // بستن سرچ‌بار با کلیک بیرون
+        document.addEventListener("click", function (event) {
+            if (!searchIcon.contains(event.target) && !searchBar.contains(event.target)) {
+                searchBar.classList.remove("active");
+                searchBar.value = "";
+                chatItems.forEach(item => item.classList.remove("hidden"));
+            }
+        });
+
+        // WebSocket برای به‌روزرسانی وضعیت کاربران
+        const userStatusSocket = new WebSocket(
+            'ws://' + window.location.host + '/ws/user_status/'
+        );
+
+        // گرفتن وضعیت اولیه همه کاربران
+        {% for chat in chats %}
+            {% if chat.user1 == request.user %}
+                {% with other_user=chat.user2 %}
+                    fetch('/get_user_status/{{ other_user.username }}/')
+                        .then(response => response.json())
+                        .then(data => {
+                            const statusIndicator = document.getElementById('status-{{ other_user.username }}');
+                            const lastSeen = document.getElementById('last-seen-{{ other_user.username }}');
+                            if (data.hide_online_status) {
+                                statusIndicator.classList.add('offline');
+                                lastSeen.textContent = "وضعیت آنلاین: غیرفعال";
+                            } else if (data.show_last_seen) {
+                                statusIndicator.classList.add(data.is_online ? 'online' : 'offline');
+                                lastSeen.textContent = data.is_online ? "آنلاین" : " " + formatRelativeTime(data.last_seen);
+                                if (!data.is_online) {
+                                    lastSeen.setAttribute('data-last-seen-timestamp', data.last_seen);
+                                }
+                            } else {
+                                statusIndicator.classList.add('offline');
+                                lastSeen.textContent = "غیرفعال";
+                            }
+                        })
+                        .catch(error => console.error("خطا در گرفتن وضعیت کاربر {{ other_user.username }}:", error));
+                {% endwith %}
+            {% else %}
+                {% with other_user=chat.user1 %}
+                    fetch('/get_user_status/{{ other_user.username }}/')
+                        .then(response => response.json())
+                        .then(data => {
+                            const statusIndicator = document.getElementById('status-{{ other_user.username }}');
+                            const lastSeen = document.getElementById('last-seen-{{ other_user.username }}');
+                            if (data.hide_online_status) {
+                                statusIndicator.classList.add('offline');
+                                lastSeen.textContent = "وضعیت آنلاین: غیرفعال";
+                            } else if (data.show_last_seen) {
+                                statusIndicator.classList.add(data.is_online ? 'online' : 'offline');
+                                lastSeen.textContent = data.is_online ? "آنلاین" : " " + formatRelativeTime(data.last_seen);
+                                if (!data.is_online) {
+                                    lastSeen.setAttribute('data-last-seen-timestamp', data.last_seen);
+                                }
+                            } else {
+                                statusIndicator.classList.add('offline');
+                                lastSeen.textContent = "غیرفعال";
+                            }
+                        })
+                        .catch(error => console.error("خطا در گرفتن وضعیت کاربر {{ other_user.username }}:", error));
+                {% endwith %}
+            {% endif %}
+        {% endfor %}
+
+        // WebSocket برای به‌روزرسانی وضعیت کاربران
+        userStatusSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === "user_status") {
+                const statusIndicator = document.getElementById('status-' + data.username);
+                const lastSeen = document.getElementById('last-seen-' + data.username);
+                if (statusIndicator && lastSeen) {
+                    fetch('/get_user_status/' + data.username + '/')
+                        .then(response => response.json())
+                        .then(statusData => {
+                            if (statusData.hide_online_status) {
+                                statusIndicator.classList.remove('online', 'offline');
+                                statusIndicator.classList.add('offline');
+                                lastSeen.textContent = "غیرفعال";
+                            } else if (statusData.show_last_seen) {
+                                statusIndicator.classList.remove('online', 'offline');
+                                statusIndicator.classList.add(data.is_online ? 'online' : 'offline');
+                                lastSeen.textContent = data.is_online ? "آنلاین" : " " + formatRelativeTime(data.last_seen);
+                                if (!data.is_online) {
+                                    lastSeen.setAttribute('data-last-seen-timestamp', data.last_seen);
+                                }
+                            } else {
+                                statusIndicator.classList.remove('online', 'offline');
+                                statusIndicator.classList.add('offline');
+                                lastSeen.textContent = "غیرفعال";
+                            }
+                        })
+                        .catch(error => console.error("خطا در به‌روزرسانی وضعیت کاربر " + data.username + ":", error));
+                }
+            }
+        };
+
+        userStatusSocket.onclose = function(e) {
+            console.error('User status socket closed unexpectedly:', e);
+        };
+
+        // بقیه اسکریپت‌ها (برای مودال)
+        const modal = document.getElementById("contacts-modal");
+        const toggleButton = document.getElementById("toggle-modal");
+        const searchInput = document.getElementById("search");
+        const contactsList = document.getElementById("contacts-list");
+        const userItems = document.querySelectorAll("user-item");
+
+        toggleButton.addEventListener("click", function (e) {
+            e.preventDefault();
+            const isModalVisible = modal.style.display === "block";
+            modal.style.display = isModalVisible ? "none" : "block";
+            if (!isModalVisible) {
+                searchInput.focus();
+                searchInput.value = "@";
+            } else {
+                searchInput.value = "";
+                userItems.forEach(item => item.style.display = "none");
+            }
+        });
+
+        searchInput.addEventListener("input", function () {
+            let search = this.value.trim().toLowerCase();
+            if (!search) {
+                userItems.forEach(item => item.style.display = "none");
+                return;
+            }
+            if (search.startsWith("@")) {
+                search = search.substring(1);
+            }
+            let hasMatch = false;
+            userItems.forEach(item => {
+                const username = item.getAttribute("data-username").toLowerCase();
+                if (username.includes(search)) {
+                    item.style.display = "block";
+                    hasMatch = true;
+                } else {
+                    item.style.display = "none";
+                }
+            });
+            if (!hasMatch && search) {
+                contactsList.innerHTML = '<li style="color: red;">کاربری یافت نشد</li>';
+            } else if (hasMatch) {
+                contactsList.innerHTML = "";
+                userItems.forEach(item => {
+                    const username = item.getAttribute("data-username").toLowerCase();
+                    if (username.includes(search)) {
+                        contactsList.appendChild(item.cloneNode(true));
+                    }
+                });
+            }
+        });
+
+        searchInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" && this.value.trim()) {
+                let searchValue = this.value.trim().toLowerCase();
+                if (searchValue.startsWith("@")) {
+                    searchValue = searchValue.substring(1);
+                }
+                const matchedUser = Array.from(userItems).find(item =>
+                    item.getAttribute("data-username").toLowerCase() === searchValue
+                );
+                if (matchedUser) {
+                    window.location.href = matchedUser.querySelector("a").href;
+                }
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!modal.contains(event.target) && event.target !== toggleButton && !toggleButton.contains(event.target)) {
+                modal.style.display = "none";
+                searchInput.value = "";
+                userItems.forEach(item => item.style.display = "none");
+            }
+        });
+    });
+</script>
+{% endblock %}

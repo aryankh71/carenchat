@@ -1,0 +1,243 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>چت با {{ other_user.username }}</title>
+    <!-- اضافه کردن Tailwind CSS از طریق CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- اضافه کردن Font Awesome برای آیکون‌ها -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- اضافه کردن استایل‌های سفارشی برای انیمیشن و جهت متن -->
+    <style>
+        /* انیمیشن slideIn برای پیام‌ها */
+        @keyframes slideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        /* تنظیمات جهت متن برای پیام‌ها */
+        .bubble {
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            unicode-bidi: isolate;
+        }
+
+        /* مخفی کردن resizer در textarea */
+        textarea::-webkit-resizer {
+            display: none;
+        }
+
+        /* تنظیمات اضافی برای textarea */
+        textarea {
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
+
+        /* انیمیشن پالس برای وضعیت آنلاین */
+        @keyframes pulse {
+            0% { background-color: #34d399; } /* سبز کمرنگ */
+            50% { background-color: #10b981; } /* سبز پررنگ */
+            100% { background-color: #34d399; }
+        }
+
+        .online {
+            background-color: #34d399;
+            animation: pulse 2s infinite;
+        }
+
+        .offline {
+            background-color: #9ca3af; /* خاکستری */
+        }
+
+        /* استایل برای پاپ‌آپ تصویر بزرگ */
+        #photo-modal {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        #photo-modal img {
+            max-height: 80vh;
+            max-width: 90vw;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen bg-gray-100 font-sans" dir="rtl"
+      data-username="{{ other_user.username }}"
+      data-current-user="{{ request.user.username }}"
+      data-is-blocked="{{ is_blocked|yesno:'true,false' }}"
+      data-is-blocked-by-me="{{ is_blocked_by_me|yesno:'true,false' }}"
+      data-is-blocked-by-other="{{ is_blocked_by_other|yesno:'true,false' }}">
+    <!-- هدر -->
+    <header class="bg-white p-3 border-b border-gray-200 flex items-center justify-between">
+        <a href="{% url 'home' %}" class="text-xl text-gray-700"><i class="fas fa-arrow-right"></i></a>
+        <div class="flex items-center flex-1 mx-3">
+            {% if is_blocked_by_other %}
+                <!-- اگه کاربر توسط مخاطب بلاک شده، تصویر پروفایل نشون داده نشه -->
+                <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                    <span class="text-gray-500">بلاک شده</span>
+                </div>
+            {% else %}
+                <!-- تصویر پروفایل -->
+                <div class="relative cursor-pointer" onclick="openProfileModal('{{ other_user.username }}')">
+                    <img src="{{ other_user.profile_photo.url|default:'/static/default_profile.png' }}"
+                         alt="{{ other_user.username }}" class="w-10 h-10 rounded-full ml-3">
+                    <!-- چراغ وضعیت -->
+                    <span id="user-status-indicator"
+                          class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white"></span>
+                </div>
+            {% endif %}
+            <div>
+                <div class="text-base font-bold text-gray-800">{{ other_user.username }}</div>
+                <div id="block-status">
+                    {% if is_blocked_by_other %}
+                        <p class="text-sm text-red-500">شما توسط این کاربر بلاک شده‌اید</p>
+                    {% endif %}
+                </div>
+                <div id="block-message">
+                    {% if is_blocked %}
+                        <p class="text-center text-red-500">
+                            {% if is_blocked_by_me %}
+                                شما این کاربر را بلاک کرده‌اید.
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                </div>
+                {% if not is_blocked_by_other %}
+                    <div class="flex items-center gap-1" id="user-status">
+                        <span class="status-dot w-2 h-2 rounded-full inline-block" id="user-status-dot"></span>
+                        <span class="status-text text-xs text-gray-500" id="user-status-text"></span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <!-- دکمه‌های بلاک و آنبلاک -->
+        <div class="flex gap-3" id="block-button-container">
+            <button id="block-button"
+                    class="text-sm bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 {% if is_blocked_by_me %}hidden{% endif %}">
+                بلاک
+            </button>
+            <button id="unblock-button"
+                    class="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 {% if not is_blocked_by_me %}hidden{% endif %}">
+                آنبلاک
+            </button>
+        </div>
+    </header>
+
+    <!-- نمایش پیام‌ها -->
+    <div id="chat-messages" class="flex flex-col flex-1 overflow-y-auto p-4 bg-gray-200">
+        {% for message in messages %}
+            <div class="message mb-4 flex flex-col {% if message.sender == request.user %}items-start{% else %}items-end{% endif %}"
+                 data-message-id="{{ message.id }}"
+                 data-is-read="{{ message.is_read|yesno:'true,false' }}">
+                <div class="bubble max-w-xs p-3 rounded-2xl text-sm shadow-md {% if message.sender == request.user %}bg-purple-800 text-white rounded-br-md rounded-bl-2xl{% else %}bg-white text-gray-800 rounded-bl-md rounded-br-2xl{% endif %}">
+                    {{ message.text }}
+                </div>
+                <div class="time flex gap-1 mt-1 text-xs text-gray-500 {% if message.sender == request.user %}justify-start{% else %}justify-end{% endif %}">
+                    <span class="time-text">{{ message.created_at|date:"H:i" }}</span>
+                    {% if message.sender == request.user %}
+                        <span class="status-text">{{ message.is_read|yesno:"دیده شد,ارسال شد" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <p class="no-messages text-center text-gray-500 p-5">هنوز پیامی وجود ندارد</p>
+        {% endfor %}
+    </div>
+
+    <!-- نمایش تایپینگ -->
+    <div class="typing-indicator text-xs text-gray-500 h-4 leading-4 px-4 opacity-0 transition-opacity duration-300"
+         id="typing-indicator">در حال نوشتن...</div>
+
+    <!-- فرم ارسال پیام -->
+    <div id="chat-box">
+        {% if not is_blocked %}
+            <div class="bg-white p-3 border-t border-gray-200 flex items-center gap-3">
+                <form id="message-form" class="flex-1 flex gap-3">
+                    <textarea id="message-input" name="message" placeholder="پیام خود را بنویسید..." rows="1"
+                              class="flex-1 w-full p-2 border border-gray-300 rounded-full text-sm h-[40px] resize-none overflow-y-auto focus:outline-none focus:border-purple-800 focus:ring-2 focus:ring-purple-200 font-sans"></textarea>
+                    <button type="submit"
+                            class="w-10 h-10 flex items-center justify-center bg-purple-800 text-white rounded-full hover:bg-purple-900 transition-colors">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </form>
+                <div class="flex gap-3">
+                    <a href="#" class="text-xl text-gray-500" id="mic-icon"><i class="fas fa-microphone"></i></a>
+                    <a href="#" class="text-xl text-gray-500" id="gallery-icon"><i class="fas fa-image"></i></a>
+                </div>
+            </div>
+        {% else %}
+            <div class="bg-white p-3 border-t border-gray-200 text-center text-red-500 flex justify-center items-center">
+                شما نمی‌توانید به این کاربر پیام بفرستید.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- نوار پایین -->
+    <div class="flex justify-around bg-white p-3 border-t border-gray-200 sticky bottom-0">
+        <a href="{% url 'home' %}" class="text-gray-500 text-2xl active:text-purple-800"><i class="fas fa-home"></i></a>
+        <a href="{% url 'home' %}" class="text-gray-500 text-2xl"><i class="fas fa-plus"></i></a>
+        <a href="{% url 'logout' %}" class="text-gray-500 text-2xl"><i class="fas fa-sign-out-alt"></i></a>
+    </div>
+
+    <!-- Modal برای نمایش پروفایل -->
+    <div id="profile-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md relative">
+            <button onclick="closeProfileModal()"
+                    class="absolute top-2 left-2 text-gray-500 hover:text-gray-700">
+                ✕
+            </button>
+            <div id="profile-content" class="text-center">
+                <!-- تصویر پروفایل اصلی -->
+                <img id="profile-main-photo" src="" alt="Profile"
+                     class="w-32 h-32 rounded-full mx-auto mb-4 object-cover cursor-pointer"
+                     onclick="openPhotoModal()">
+                <!-- جزئیات کاربر -->
+                <h3 id="profile-username" class="text-xl font-semibold text-gray-800 mb-2"></h3>
+                <p id="profile-phone" class="text-gray-600 mb-1"></p>
+                <p id="profile-email" class="text-gray-600 mb-1"></p>
+                <p id="profile-bio" class="text-gray-600 mb-1"></p>
+                <p id="profile-date-joined" class="text-gray-600"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal برای نمایش تصویر بزرگ و آلبوم -->
+    <div id="photo-modal" class="fixed inset-0 flex items-center justify-center hidden z-50">
+        <div class="relative">
+            <button onclick="closePhotoModal()"
+                    class="absolute top-4 left-4 text-white text-2xl hover:text-gray-300">
+                ✕
+            </button>
+            <img id="photo-modal-image" src="" alt="Photo" class="rounded-lg">
+            <button onclick="prevPhoto()"
+                    class="absolute top-1/2 left-4 transform -translate-y-1/2 text-white text-3xl hover:text-gray-300">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <button onclick="nextPhoto()"
+                    class="absolute top-1/2 right-4 transform -translate-y-1/2 text-white text-3xl hover:text-gray-300">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- فایل صوتی برای نوتیفیکیشن -->
+    <audio id="notification-sound" src="{% static 'chatbox/sounds/track.mp3' %}" preload="auto"></audio>
+
+    <!-- وارد کردن فایل جاوااسکریپت -->
+    <script src="{% static 'chatbox/js/chat.js' %}"></script>
+</body>
+</html>

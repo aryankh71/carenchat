@@ -1,0 +1,504 @@
+{% extends 'chatbox/base.html' %}
+{% load widget_tweaks %}
+{% load static %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'chatbox/css/home.css' %}">
+<!-- لود Font Awesome برای آیکون + -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+    .form-container {
+        max-width: 1000px; /* عرض بزرگ‌تر */
+        margin: 50px auto; /* فاصله از بالا و پایین */
+        padding: 20px; /* پدینگ داخلی */
+        border: 1px solid #ddd; /* حاشیه */
+        border-radius: 10px; /* گوشه‌های گرد */
+        box-shadow: 0 0 10px rgba(0,0,0,0.1); /* سایه */
+    }
+    .profile-photo-container {
+        margin: -20px -20px 0 -20px !important; /* خنثی کردن پدینگ form-container */
+        padding: 0 !important; /* حذف پدینگ */
+        width: calc(100% + 40px) !important; /* جبران پدینگ */
+    }
+    .profile-photo {
+        width: 100%; /* عرض کامل */
+        height: 300px; /* ارتفاع ثابت برای شکل بنر */
+        object-fit: cover;
+        border-radius: 0; /* حذف گوشه‌های گرد */
+        border: none; /* حذف حاشیه */
+        display: block;
+        cursor: pointer; /* نشانگر کلیک */
+    }
+    .upload-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 20px 0; /* فاصله از بالا و پایین */
+    }
+    .add-photo-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: relative;
+    }
+    .add-photo-btn:hover {
+        background: #218838;
+    }
+    .add-photo-btn:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+    }
+    .spinner {
+        display: none;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #28a745;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        position: absolute;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .album-section {
+        margin-top: 30px;
+    }
+    .album-gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .album-photo {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        cursor: pointer;
+    }
+    .album-photo-container {
+        position: relative;
+        display: inline-block;
+    }
+    .set-profile-btn, .delete-photo-btn {
+        position: absolute;
+        bottom: 5px;
+        border: none;
+        border-radius: 3px;
+        padding: 2px 5px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    .set-profile-btn {
+        right: 5px;
+        background: #007bff;
+        color: white;
+    }
+    .set-profile-btn:hover {
+        background: #0056b3;
+    }
+    .set-profile-btn:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+    }
+    .delete-photo-btn {
+        left: 5px;
+        background: #dc3545;
+        color: white;
+    }
+    .delete-photo-btn:hover {
+        background: #c82333;
+    }
+    .modal-img {
+        max-width: 100%;
+        max-height: 80vh;
+        margin: auto;
+        display: block;
+    }
+    /* کوچیک‌تر کردن لیبل‌ها و فیلدها */
+    .form-label {
+        font-size: 14px; /* فونت لیبل‌ها کوچیک‌تر */
+    }
+    .form-control {
+        font-size: 14px; /* فونت فیلدها کوچیک‌تر */
+        padding: 5px 10px; /* پدینگ کمتر */
+        height: 35px; /* ارتفاع کمتر */
+    }
+    .btn {
+        font-size: 14px; /* فونت دکمه‌ها کوچیک‌تر */
+        padding: 5px 10px; /* پدینگ کمتر */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <!-- نمایش پیام‌های موفقیت یا خطا -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- نمایش تصویر پروفایل -->
+    <div class="profile-photo-container">
+        {% if request.user.profile_photo %}
+            <img src="{{ request.user.profile_photo.url }}" alt="تصویر پروفایل" class="profile-photo" data-bs-toggle="modal" data-bs-target="#albumModal">
+        {% else %}
+            <img src="/media/profile_pics/default.jpg" alt="تصویر پیش‌فرض" class="profile-photo" data-bs-toggle="modal" data-bs-target="#albumModal">
+        {% endif %}
+    </div>
+
+    <!-- فرم ویرایش پروفایل -->
+    <form method="post" id="profile-form">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="id_username" class="form-label">{{ profile_form.username.label }}</label>
+            {{ profile_form.username|add_class:"form-control" }}
+        </div>
+        <div class="mb-3">
+            <label for="id_phone" class="form-label">{{ profile_form.phone.label }}</label>
+            {{ profile_form.phone|add_class:"form-control" }}
+        </div>
+        <div class="mb-3">
+            <label for="id_email" class="form-label">{{ profile_form.email.label }}</label>
+            {{ profile_form.email|add_class:"form-control" }}
+        </div>
+        <div class="mb-3">
+            <label for="id_first_name" class="form-label">{{ profile_form.first_name.label }}</label>
+            {{ profile_form.first_name|add_class:"form-control" }}
+        </div>
+        <div class="mb-3">
+            <label for="id_last_name" class="form-label">{{ profile_form.last_name.label }}</label>
+            {{ profile_form.last_name|add_class:"form-control" }}
+        </div>
+        <button type="submit" class="btn btn-primary w-100">ذخیره</button>
+    </form>
+
+    <!-- فیلد آپلود -->
+    <div class="upload-container">
+        <label>انتخاب عکس:</label>
+        <input type="file" name="photo" id="photo-upload" accept="image/*" style="display: none;">
+        <button type="button" class="add-photo-btn trigger-upload" data-input-id="photo-upload" title="آپلود عکس">
+            <i class="fas fa-plus"></i>
+            <div class="spinner"></div>
+        </button>
+    </div>
+
+    <!-- بخش آلبوم عکس -->
+    <div class="album-section">
+        <h3>آلبوم عکس</h3>
+        <!-- نمایش عکس‌های آلبوم -->
+        <div class="album-gallery" id="album-gallery">
+            {% if album_photos %}
+                {% for photo in album_photos %}
+                    <div class="album-photo-container" data-photo-id="{{ photo.id }}">
+                        <img src="{{ photo.photo.url }}" alt="عکس آلبوم" class="album-photo" data-bs-toggle="modal" data-bs-target="#photoModal" data-img-url="{{ photo.photo.url }}">
+                        <button class="set-profile-btn" data-photo-id="{{ photo.id }}">ست کردن</button>
+                        <a href="{% url 'delete_album_photo' photo.id %}" class="delete-photo-btn" onclick="return confirm('آیا مطمئن هستید که می‌خواهید این عکس را حذف کنید؟')">حذف</a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>هنوز عکسی آپلود نشده است.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{% url 'home' %}" class="btn btn-secondary w-100 mt-2">بازگشت</a>
+
+    <!-- فوتر از home.html -->
+    <div class="bottom-nav">
+        <a href="{% url 'home' %}" class="active"><i class="fas fa-home"></i></a>
+        <a href="#" id="toggle-modal"><i class="fas fa-plus"></i></a>
+        <a href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i></a>
+    </div>
+</div>
+
+<!-- مودال برای نمایش عکس بزرگ -->
+<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="photoModalLabel">نمایش عکس</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <img src="" alt="عکس بزرگ" class="modal-img" id="modalImage">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال برای نمایش گالری آلبوم -->
+<div class="modal fade" id="albumModal" tabindex="-1" aria-labelledby="albumModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="albumModalLabel">آلبوم عکس</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="album-gallery" id="album-modal-gallery">
+                    {% if album_photos %}
+                        {% for photo in album_photos %}
+                            <div class="album-photo-container" data-photo-id="{{ photo.id }}">
+                                <img src="{{ photo.photo.url }}" alt="عکس آلبوم" class="album-photo" data-bs-toggle="modal" data-bs-target="#photoModal" data-img-url="{{ photo.photo.url }}">
+                                <button class="set-profile-btn" data-photo-id="{{ photo.id }}">ست کردن</button>
+                                <a href="{% url 'delete_album_photo' photo.id %}" class="delete-photo-btn" onclick="return confirm('آیا مطمئن هستید که می‌خواهید این عکس را حذف کنید؟')">حذف</a>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>آلبوم خالی است.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_scripts %}
+<script>
+// توابعی برای مدیریت رویدادها
+const editProfileEventHandlers = {
+    handleUploadButtonClick: function() {
+        const now = Date.now();
+        if (now - this.lastClickTime < 500) { // Debounce: حداقل 500ms بین کلیک‌ها
+            console.log('Click debounced');
+            return;
+        }
+        this.lastClickTime = now;
+
+        if (this.isUploading) {
+            console.log('Upload in progress, please wait...');
+            return;
+        }
+        const inputId = this.uploadButton.getAttribute('data-input-id');
+        const fileInput = document.getElementById(inputId);
+        console.log('Triggering file input click');
+        fileInput.click();
+    },
+
+    handleFileChange: function() {
+        const file = this.fileInput.files[0];
+        if (!file) {
+            console.log('No file selected');
+            return;
+        }
+
+        // غیرفعال کردن دکمه و نمایش اسپینر
+        this.isUploading = true;
+        this.uploadButton.disabled = true;
+        this.spinner.style.display = 'block';
+        console.log('Starting upload for file:', file.name);
+
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        fetch("{% url 'upload_photo' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                // اضافه کردن عکس جدید به گالری
+                const gallery = document.getElementById('album-gallery');
+                const modalGallery = document.getElementById('album-modal-gallery');
+
+                // حذف پیام "هنوز عکسی آپلود نشده است" اگه وجود داشته باشه
+                if (gallery.querySelector('p')) {
+                    gallery.innerHTML = '';
+                    modalGallery.innerHTML = '';
+                }
+
+                // اضافه کردن عکس به گالری اصلی
+                const photoContainer = document.createElement('div');
+                photoContainer.className = 'album-photo-container';
+                photoContainer.setAttribute('data-photo-id', data.photo_id);
+                photoContainer.innerHTML = `
+                    <img src="${data.photo_url}" alt="عکس آلبوم" class="album-photo" data-bs-toggle="modal" data-bs-target="#photoModal" data-img-url="${data.photo_url}">
+                    <button class="set-profile-btn" data-photo-id="${data.photo_id}">ست کردن</button>
+                    <a href="{% url 'delete_album_photo' 0 %}".replace('0', data.photo_id) class="delete-photo-btn" onclick="return confirm('آیا مطمئن هستید که می‌خواهید این عکس را حذف کنید؟')">حذف</a>
+                `;
+                gallery.appendChild(photoContainer);
+
+                // اضافه کردن عکس به گالری مودال
+                const modalPhotoContainer = document.createElement('div');
+                modalPhotoContainer.className = 'album-photo-container';
+                modalPhotoContainer.setAttribute('data-photo-id', data.photo_id);
+                modalPhotoContainer.innerHTML = `
+                    <img src="${data.photo_url}" alt="عکس آلبوم" class="album-photo" data-bs-toggle="modal" data-bs-target="#photoModal" data-img-url="${data.photo_url}">
+                    <button class="set-profile-btn" data-photo-id="${data.photo_id}">ست کردن</button>
+                    <a href="{% url 'delete_album_photo' 0 %}".replace('0', data.photo_id) class="delete-photo-btn" onclick="return confirm('آیا مطمئن هستید که می‌خواهید این عکس را حذف کنید؟')">حذف</a>
+                `;
+                modalGallery.appendChild(modalPhotoContainer);
+
+                // آپدیت تصویر پروفایل اگه اولین عکسه
+                if (document.querySelector('.profile-photo').src.includes('default.jpg')) {
+                    document.querySelector('.profile-photo').src = data.photo_url;
+                    // آپدیت تصویر پروفایل توی base.html
+                    const headerProfilePhoto = document.querySelector('.header-profile-photo');
+                    if (headerProfilePhoto) {
+                        headerProfilePhoto.src = data.photo_url;
+                        console.log('Header profile photo updated on upload:', data.photo_url);
+                    }
+                    // ذخیره URL توی localStorage
+                    localStorage.setItem('profilePhotoUrl', data.photo_url);
+                }
+
+                // ثبت رویدادها برای المنت‌های جدید
+                photoContainer.querySelector('.album-photo').addEventListener('click', this.handlePhotoClick);
+                modalPhotoContainer.querySelector('.album-photo').addEventListener('click', this.handlePhotoClick);
+
+                // ثبت رویداد برای دکمه "ست کردن"
+                const setProfileButtons = document.querySelectorAll('.set-profile-btn');
+                setProfileButtons.forEach(button => {
+                    button.removeEventListener('click', this.handleSetProfilePhoto);
+                    button.addEventListener('click', this.handleSetProfilePhoto.bind(this));
+                });
+            } else {
+                alert('خطا در آپلود عکس: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            alert('خطا در ارتباط با سرور');
+        })
+        .finally(() => {
+            // فعال کردن دوباره دکمه و مخفی کردن اسپینر
+            this.isUploading = false;
+            this.uploadButton.disabled = false;
+            this.spinner.style.display = 'none';
+            // ریست کردن ورودی فایل برای اجازه دادن به آپلود دوباره
+            this.fileInput.value = '';
+            console.log('Upload finished');
+        });
+    },
+
+    handlePhotoClick: function() {
+        const imgUrl = this.getAttribute('data-img-url');
+        document.getElementById('modalImage').src = imgUrl;
+    },
+
+    handleSetProfilePhoto: function(event) {
+        event.preventDefault();
+        if (this.isSettingProfile) {
+            console.log('Profile setting in progress, please wait...');
+            return;
+        }
+
+        const button = event.target;
+        const photoId = button.getAttribute('data-photo-id');
+        console.log('Setting profile photo for photo ID:', photoId);
+
+        // غیرفعال کردن دکمه
+        this.isSettingProfile = true;
+        button.disabled = true;
+
+        fetch("{% url 'set_profile_photo' 0 %}".replace('0', photoId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            console.log('Set profile photo response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Set profile photo response data:', data);
+            if (data.success) {
+                // آپدیت تصویر پروفایل توی صفحه فعلی
+                const profilePhoto = document.querySelector('.profile-photo');
+                profilePhoto.src = data.profile_photo_url;
+
+                // آپدیت تصویر پروفایل توی base.html
+                const headerProfilePhoto = document.querySelector('.header-profile-photo');
+                if (headerProfilePhoto) {
+                    headerProfilePhoto.src = data.profile_photo_url;
+                    console.log('Header profile photo updated on set:', data.profile_photo_url);
+                } else {
+                    console.log('Header profile photo element not found');
+                }
+
+                // ذخیره URL توی localStorage
+                localStorage.setItem('profilePhotoUrl', data.profile_photo_url);
+
+                alert(data.message);
+            } else {
+                alert('خطا: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Set profile photo fetch error:', error);
+            alert('خطا در ارتباط با سرور');
+        })
+        .finally(() => {
+            // فعال کردن دوباره دکمه
+            this.isSettingProfile = false;
+            button.disabled = false;
+            console.log('Set profile photo finished');
+        });
+    },
+
+    init: function() {
+        // متغیرهای مشترک
+        this.isUploading = false;
+        this.isSettingProfile = false;
+        this.lastClickTime = 0;
+        this.uploadButton = document.querySelector('.trigger-upload');
+        this.fileInput = document.getElementById('photo-upload');
+        this.spinner = this.uploadButton.querySelector('.spinner');
+
+        // حذف رویدادهای قبلی
+        this.uploadButton.removeEventListener('click', this.handleUploadButtonClick);
+        this.fileInput.removeEventListener('change', this.handleFileChange);
+
+        // ثبت رویدادهای جدید
+        this.uploadButton.addEventListener('click', this.handleUploadButtonClick.bind(this));
+        this.fileInput.addEventListener('change', this.handleFileChange.bind(this));
+        console.log('Event handlers initialized');
+
+        // ثبت رویداد برای نمایش عکس بزرگ در مودال
+        document.querySelectorAll('.album-photo').forEach(photo => {
+            photo.removeEventListener('click', this.handlePhotoClick);
+            photo.addEventListener('click', this.handlePhotoClick);
+        });
+
+        // ثبت رویداد برای دکمه‌های "ست کردن" که از قبل وجود دارن
+        document.querySelectorAll('.set-profile-btn').forEach(button => {
+            button.removeEventListener('click', this.handleSetProfilePhoto);
+            button.addEventListener('click', this.handleSetProfilePhoto.bind(this));
+        });
+    }
+};
+
+// اجرا هنگام لود صفحه
+document.addEventListener('DOMContentLoaded', function() {
+    editProfileEventHandlers.init();
+});
+</script>
+{% endblock %}
+{% endblock %}
